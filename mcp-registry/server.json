@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.vericto/sql-firewall",
+  "title": "Vericto SQL Firewall",
+  "description": "Check SQL against your Vericto rules before it runs: blocks destructive or risky statements.",
+  "version": "1.0.0",
+  "websiteUrl": "https://vericto.com/docs/mcp",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.vericto.com/mcp",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "description": "Vericto API key (dashboard > Settings > API keys)",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
