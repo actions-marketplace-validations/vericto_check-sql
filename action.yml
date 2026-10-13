@@ -1,0 +1,178 @@
+name: Vericto SQL Check
+description: >-
+  Check SQL migrations and queries against your Vericto rules in CI. Findings
+  show up as Code Scanning annotations on pull requests.
+author: Vericto
+
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  api-key:
+    description: >-
+      Vericto API key (vtro_...). Pass it from a secret. Not needed when
+      `oidc` is true. Falls back to a VERICTO_API_KEY environment variable
+      set on the job.
+    required: false
+    default: ""
+  oidc:
+    description: >-
+      Authenticate with GitHub OIDC (workload identity) instead of a static
+      key. Needs `permissions: id-token: write` and a trust policy for the
+      workspace in Vericto.
+    required: false
+    default: "false"
+  workspace:
+    description: >-
+      Vericto workspace ID for OIDC (ws_...). Falls back to VERICTO_WORKSPACE_ID
+      and then to `workspace_id` in .vericto.toml.
+    required: false
+    default: ""
+  files:
+    description: >-
+      SQL files to check: paths or glob patterns (`*`, `?`, `[...]`, `**`),
+      separated by spaces or newlines, relative to `working-directory`. A
+      directory means every *.sql file under it. Leave empty to check the
+      changed files instead.
+    required: false
+    default: ""
+  changed:
+    description: >-
+      Check only the *.sql files changed against the base (the PR base branch,
+      the previous commit on push, or `since`). Empty means true when `files`
+      is empty and false otherwise.
+    required: false
+    default: ""
+  since:
+    description: >-
+      Explicit base ref for the changed-files diff, e.g. `origin/main`.
+      Implies `changed`.
+    required: false
+    default: ""
+  dialect:
+    description: >-
+      SQL dialect: postgres, mysql, oracle or mssql. Empty means the CLI
+      default: `default_dialect` in .vericto.toml, else postgres.
+    required: false
+    default: ""
+  baseline:
+    description: >-
+      Baseline file (as written by `vericto baseline`, by default
+      .vericto-baseline.json). Findings recorded in it do not fail the run.
+      Falls back to `baseline` in .vericto.toml.
+    required: false
+    default: ""
+  format:
+    description: "Report format: sarif, json, text, gitlab-codequality or gitlab-sast."
+    required: false
+    default: sarif
+  upload-sarif:
+    description: >-
+      Upload the SARIF report to GitHub Code Scanning (needs
+      `security-events: write`). Only applies when `format` is sarif.
+    required: false
+    default: "true"
+  api-url:
+    description: "Vericto API base URL. Empty means the CLI default (https://api.vericto.com)."
+    required: false
+    default: ""
+  timeout:
+    description: "Per-request timeout in seconds. Empty means the CLI default (30)."
+    required: false
+    default: ""
+  cli-version:
+    description: >-
+      Vericto CLI release to install (from github.com/vericto/vericto-cli).
+      Pinned per action release; `latest` is not accepted.
+    required: false
+    default: "1.7.1" # pinned-cli-version
+  working-directory:
+    description: >-
+      Directory to run the check from (where .vericto.toml lives). With
+      `changed`, it must be the root of the git checkout.
+    required: false
+    default: "."
+
+outputs:
+  exit-code:
+    description: "CLI exit code: 0 pass, 1 finding at or above fail_on, 2 usage, 3 auth, 4 backend."
+    value: ${{ steps.check.outputs.exit-code }}
+  result:
+    description: "pass, warn (passed with findings that do not fail the run) or fail."
+    value: ${{ steps.check.outputs.result }}
+  sarif-file:
+    description: "Path to the SARIF report. Empty when no report was written (format not sarif, nothing to check, or an error)."
+    value: ${{ steps.check.outputs.sarif-file }}
+  report-file:
+    description: "Path to the report for any machine format. Empty for `text`, which goes to the log."
+    value: ${{ steps.check.outputs.report-file }}
+  blocked:
+    description: "Number of BLOCKED findings (sarif and json formats)."
+    value: ${{ steps.check.outputs.blocked }}
+  flagged:
+    description: "Number of FLAGGED findings (sarif and json formats)."
+    value: ${{ steps.check.outputs.flagged }}
+  monitored:
+    description: "Number of MONITORED findings (sarif and json formats)."
+    value: ${{ steps.check.outputs.monitored }}
+  parse-errors:
+    description: "Number of statements that could not be parsed (sarif and json formats)."
+    value: ${{ steps.check.outputs.parse-errors }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve Vericto CLI release
+      id: resolve
+      shell: bash
+      env:
+        VA_CLI_VERSION: ${{ inputs.cli-version }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/resolve.sh"
+
+    - name: Cache Vericto CLI download
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.resolve.outputs.cache-dir }}
+        key: ${{ steps.resolve.outputs.cache-key }}
+
+    - name: Install Vericto CLI (checksum verified)
+      id: install
+      shell: bash
+      env:
+        VA_VERSION: ${{ steps.resolve.outputs.version }}
+        VA_ASSET: ${{ steps.resolve.outputs.asset }}
+        VA_CACHE_DIR: ${{ steps.resolve.outputs.cache-dir }}
+        VA_GH_TOKEN: ${{ github.token }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/install.sh"
+
+    - name: Vericto check
+      id: check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        VA_BIN: ${{ steps.install.outputs.bin }}
+        VA_API_KEY: ${{ inputs.api-key }}
+        VA_OIDC: ${{ inputs.oidc }}
+        VA_WORKSPACE: ${{ inputs.workspace }}
+        VA_FILES: ${{ inputs.files }}
+        VA_CHANGED: ${{ inputs.changed }}
+        VA_SINCE: ${{ inputs.since }}
+        VA_DIALECT: ${{ inputs.dialect }}
+        VA_BASELINE: ${{ inputs.baseline }}
+        VA_FORMAT: ${{ inputs.format }}
+        VA_UPLOAD_SARIF: ${{ inputs.upload-sarif }}
+        VA_API_URL: ${{ inputs.api-url }}
+        VA_TIMEOUT: ${{ inputs.timeout }}
+        VA_EVENT_NAME: ${{ github.event_name }}
+        VA_EVENT_BEFORE: ${{ github.event.before }}
+        VA_MERGE_GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+        VA_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/check.sh"
+
+    - name: Upload SARIF to Code Scanning
+      if: always() && inputs.upload-sarif == 'true' && steps.check.outputs.sarif-file != ''
+      uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+      with:
+        sarif_file: ${{ steps.check.outputs.sarif-file }}
+        checkout_path: ${{ steps.check.outputs.checkout-path || github.workspace }}
