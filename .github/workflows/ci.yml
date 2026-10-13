@@ -1,0 +1,251 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (actionlint, shellcheck, pins)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: actionlint
+        uses: docker://rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 # 1.7.12
+        with:
+          args: -color
+
+      - name: shellcheck
+        uses: docker://koalaman/shellcheck@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d # v0.11.0
+        with:
+          args: -x scripts/lib.sh scripts/resolve.sh scripts/install.sh scripts/verify-checksum.sh scripts/check.sh test/checksum-test.sh
+
+      - name: Every action is pinned by full commit SHA with a version comment
+        shell: bash
+        run: |
+          set -euo pipefail
+          bad=$(grep -nE '^\s*(-\s+)?uses:' action.yml .github/workflows/*.yml \
+            | grep -vE 'uses:\s+\./' \
+            | grep -vE 'uses:\s+[^@[:space:]]+@[0-9a-f]{40} # v[0-9]+(\.[0-9]+)*$' \
+            | grep -vE 'uses:\s+docker://[^@[:space:]]+@sha256:[0-9a-f]{64} # v?[0-9.]+$' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::unpinned or uncommented uses: lines"
+            echo "$bad"
+            exit 1
+          fi
+
+  checksum:
+    name: Checksum gate (tampered checksum and archive must fail)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Pinned CLI version
+        id: pin
+        shell: bash
+        run: bash test/pinned-version.sh >>"$GITHUB_OUTPUT"
+      - name: Verify the checksum gate
+        shell: bash
+        env:
+          PIN: ${{ steps.pin.outputs.version }}
+        run: bash test/checksum-test.sh "$PIN"
+
+  self-test:
+    name: Self-test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Pinned CLI version
+        id: pin
+        shell: bash
+        run: bash test/pinned-version.sh >>"$GITHUB_OUTPUT"
+
+      # 1. Install + verify, then the action's own credential check (exit 3).
+      - name: "Action: no credentials"
+        id: nocreds
+        continue-on-error: true
+        uses: ./
+        with:
+          files: test/fixtures/migrations/*.sql
+
+      - name: "Assert: installed the pinned CLI, failed with exit 3"
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.nocreds.outcome }}
+          EXIT_CODE: ${{ steps.nocreds.outputs.exit-code }}
+          RESULT: ${{ steps.nocreds.outputs.result }}
+          PIN: ${{ steps.pin.outputs.version }}
+        run: |
+          set -euo pipefail
+          got=$(vericto --version | tr -d '\r')
+          echo "vericto --version: $got"
+          test "$got" = "vericto $PIN"
+          test "$OUTCOME" = failure
+          test "$EXIT_CODE" = 3
+          test "$RESULT" = fail
+
+      # 2. The CLI runs end to end (cached install, globs, key via env) against
+      #    an address nothing listens on: no verdict, exit 4, no SARIF.
+      - name: "Action: API unreachable"
+        id: offline
+        continue-on-error: true
+        uses: ./
+        with:
+          api-key: vtro_selftest_not_a_real_key
+          files: |
+            test/fixtures/**/*.sql
+            test/fixtures/migrations
+          api-url: http://127.0.0.1:9
+          timeout: "2"
+
+      - name: "Assert: exit 4 propagated, nothing uploaded"
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.offline.outcome }}
+          EXIT_CODE: ${{ steps.offline.outputs.exit-code }}
+          RESULT: ${{ steps.offline.outputs.result }}
+          SARIF: ${{ steps.offline.outputs.sarif-file }}
+        run: |
+          set -euo pipefail
+          test "$OUTCOME" = failure
+          test "$EXIT_CODE" = 4
+          test "$RESULT" = fail
+          test -z "$SARIF"
+
+      # 3. OIDC requested without `id-token: write`: a clear exit 3.
+      - name: "Action: OIDC without id-token permission"
+        id: oidc
+        continue-on-error: true
+        uses: ./
+        with:
+          oidc: true
+          workspace: ws_selftest
+          changed: true
+          since: HEAD
+
+      - name: "Assert: OIDC failed with exit 3"
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.oidc.outcome }}
+          EXIT_CODE: ${{ steps.oidc.outputs.exit-code }}
+        run: |
+          set -euo pipefail
+          test "$OUTCOME" = failure
+          test "$EXIT_CODE" = 3
+
+      # 4. Hostile inputs are rejected, never executed.
+      - name: "Action: hostile dialect"
+        id: hostile-dialect
+        if: matrix.os == 'ubuntu-latest'
+        continue-on-error: true
+        uses: ./
+        with:
+          api-key: vtro_selftest_not_a_real_key
+          files: test/fixtures/migrations/*.sql
+          dialect: 'postgres"; touch "$RUNNER_TEMP/pwned-dialect'
+
+      - name: "Action: hostile files"
+        id: hostile-files
+        if: matrix.os == 'ubuntu-latest'
+        continue-on-error: true
+        uses: ./
+        with:
+          api-key: vtro_selftest_not_a_real_key
+          files: '$(touch $RUNNER_TEMP/pwned-files) `touch $RUNNER_TEMP/pwned-files`'
+
+      - name: "Assert: hostile inputs failed with exit 2 and ran nothing"
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        env:
+          DIALECT_EXIT: ${{ steps.hostile-dialect.outputs.exit-code }}
+          FILES_EXIT: ${{ steps.hostile-files.outputs.exit-code }}
+        run: |
+          set -euo pipefail
+          test "$DIALECT_EXIT" = 2
+          test "$FILES_EXIT" = 2
+          if ls "$RUNNER_TEMP"/pwned-* 2>/dev/null; then
+            echo "::error::an input was executed"
+            exit 1
+          fi
+
+  live:
+    name: Live check against the Vericto API
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Gate on the VERICTO_API_KEY secret
+        id: gate
+        shell: bash
+        env:
+          KEY: ${{ secrets.VERICTO_API_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "enabled=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "::notice::VERICTO_API_KEY is not set (or not available to this event); skipping the live check."
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          persist-credentials: false
+
+      - name: "Action: safe migration"
+        id: safe
+        if: steps.gate.outputs.enabled == 'true'
+        uses: ./
+        with:
+          api-key: ${{ secrets.VERICTO_API_KEY }}
+          files: test/fixtures/migrations/0001_create_users.sql
+          upload-sarif: false
+
+      - name: "Action: unbounded DELETE"
+        id: risky
+        if: steps.gate.outputs.enabled == 'true'
+        continue-on-error: true
+        uses: ./
+        with:
+          api-key: ${{ secrets.VERICTO_API_KEY }}
+          files: test/fixtures/migrations/0002_cleanup.sql
+          upload-sarif: false
+
+      - name: "Assert: verdicts"
+        if: steps.gate.outputs.enabled == 'true'
+        shell: bash
+        env:
+          SAFE_EXIT: ${{ steps.safe.outputs.exit-code }}
+          RISKY_EXIT: ${{ steps.risky.outputs.exit-code }}
+          RISKY_RESULT: ${{ steps.risky.outputs.result }}
+          RISKY_SARIF: ${{ steps.risky.outputs.sarif-file }}
+        run: |
+          set -euo pipefail
+          test "$SAFE_EXIT" = 0
+          # The workspace's rules decide block (1) or report (0 + warn).
+          case "$RISKY_EXIT/$RISKY_RESULT" in
+            1/fail | 0/warn) ;;
+            *) echo "::error::unexpected verdict $RISKY_EXIT/$RISKY_RESULT"; exit 1 ;;
+          esac
+          test -s "$RISKY_SARIF"

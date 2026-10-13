@@ -1,0 +1,69 @@
+# On a release tag (vX.Y.Z), checks the tag against CHANGELOG.md and main, then
+# moves the major tag (v1) to it.
+#
+# Moving the major tag is the standard GitHub Actions convention: users write
+# `uses: vericto/check-sql@v1` and get every compatible release, while
+# `@v1.0.0` or a full commit SHA stays fixed.
+# (https://docs.github.com/actions/sharing-automations/creating-actions/about-custom-actions#using-tags-for-release-management)
+#
+# This workflow does not create a GitHub release or publish to the Marketplace;
+# that is a manual step (see README, "Releasing").
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  major-tag:
+    name: Move the major tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # push the major tag
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag against CHANGELOG.md and main
+        id: tag
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::notice::$TAG is not a final vX.Y.Z release; the major tag is not moved."
+            exit 0
+          fi
+          major="v${BASH_REMATCH[1]}"
+          version=${TAG#v}
+          if ! grep -Eq "^## \[${version//./\\.}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}\$" CHANGELOG.md; then
+            echo "::error file=CHANGELOG.md::no '## [$version] - YYYY-MM-DD' entry for $TAG"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$TAG ($GITHUB_SHA) is not on main"
+            exit 1
+          fi
+          echo "major=$major" >>"$GITHUB_OUTPUT"
+
+      - name: Move ${{ steps.tag.outputs.major }} to ${{ github.ref_name }}
+        if: steps.tag.outputs.major != ''
+        shell: bash
+        env:
+          MAJOR: ${{ steps.tag.outputs.major }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git tag --force "$MAJOR" "$GITHUB_SHA"
+          git push --force origin "refs/tags/$MAJOR"
+          echo "### $MAJOR now points to $TAG (\`$GITHUB_SHA\`)" >>"$GITHUB_STEP_SUMMARY"
