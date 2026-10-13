@@ -163,10 +163,77 @@ in_git=false
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 && in_git=true
 
 # ── What to check ────────────────────────────────────────────────────────────
+# Converts a glob to an anchored extended regex: `**/` is zero or more
+# directories, `**` anything, `*` and `?` stay within one path segment, and
+# `[...]` is a bracket expression (`[!...]` negated).
+glob_to_ere() {
+  local g=$1 out="" c i=0 j n=${#1}
+  while [ "$i" -lt "$n" ]; do
+    c=${g:$i:1}
+    case "$c" in
+      '*')
+        if [ "${g:$i:3}" = '**/' ]; then
+          out="$out(.*/)?"
+          i=$((i + 3))
+          continue
+        elif [ "${g:$i:2}" = '**' ]; then
+          out="$out.*"
+          i=$((i + 2))
+          continue
+        fi
+        out="${out}[^/]*"
+        ;;
+      '?') out="${out}[^/]" ;;
+      '[')
+        j=$((i + 1))
+        [ "${g:$j:1}" = '!' ] && j=$((j + 1))
+        [ "${g:$j:1}" = ']' ] && j=$((j + 1))
+        while [ "$j" -lt "$n" ] && [ "${g:$j:1}" != ']' ]; do j=$((j + 1)); done
+        if [ "$j" -ge "$n" ]; then
+          out="$out\\["
+        else
+          c=${g:$((i + 1)):$((j - i - 1))}
+          case "$c" in '!'*) c="^${c#!}" ;; esac
+          out="${out}[$c]"
+          i=$j
+        fi
+        ;;
+      '.' | '+' | '(' | ')' | '{' | '}' | '|' | '^' | '$' | \\) out="$out\\$c" ;;
+      *) out="$out$c" ;;
+    esac
+    i=$((i + 1))
+  done
+  printf '^%s$' "$out"
+}
+
+# Lists the files a `**` pattern matches. Like the shell's globbing, it skips
+# hidden files and directories below the pattern's literal base.
+expand_globstar() { # PATTERN
+  local pat=$1 base="" seg rest re p rel
+  rest=$pat
+  while :; do
+    case "$rest" in
+      */*) seg=${rest%%/*} ;;
+      *) break ;;
+    esac
+    case "$seg" in *'*'* | *'?'* | *'['*) break ;; esac
+    base="$base$seg/"
+    rest=${rest#*/}
+  done
+  base=${base%/}
+  re=$(glob_to_ere "$pat")
+  [ -d "${base:-.}" ] || return 0
+  while IFS= read -r p; do
+    p=${p#./}
+    rel=${p#"$base"/}
+    case "/$rel" in */.*) continue ;; esac
+    [[ $p =~ $re ]] && printf '%s\n' "$p"
+  done < <(find "${base:-.}" -type f | LC_ALL=C sort)
+}
+
 expand_files() { # OUT
   local out=$1 pat m n f i
   local -a pats found
-  [ "${BASH_VERSINFO[0]}" -ge 4 ] && shopt -s globstar
   shopt -s nullglob
   read -r -d '' -a pats <<<"$VA_FILES" || true
   [ "${#pats[@]}" -gt 0 ] || fail 2 "input 'files' holds no patterns"
@@ -175,13 +242,19 @@ expand_files() { # OUT
   : >"$out.raw"
   for pat in "${pats[@]}"; do
     case "$pat" in -*) fail 2 "file pattern '$pat' must not start with '-'" ;; esac
-    case "$pat" in
-      *'**'*) [ "${BASH_VERSINFO[0]}" -ge 4 ] || fail 2 "'**' patterns need bash 4 or later on the runner" ;;
-    esac
+    pat=${pat#./}
     found=()
-    # Intentional: expand the glob (IFS is empty, so nothing is split).
-    # shellcheck disable=SC2206
-    found=($pat)
+    case "$pat" in
+      *'**'*)
+        # bash 3.2 (the macOS runners' bash) has no globstar: match with find.
+        while IFS= read -r f; do found[${#found[@]}]=$f; done < <(expand_globstar "$pat")
+        ;;
+      *)
+        # Intentional: expand the glob (IFS is empty, so nothing is split).
+        # shellcheck disable=SC2206
+        found=($pat)
+        ;;
+    esac
     n=0 i=0
     # An index loop: bash 3.2 joins "${found[@]}" when IFS is empty.
     while [ "$i" -lt "${#found[@]}" ]; do

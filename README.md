@@ -260,8 +260,6 @@ changed, the check passes and no SQL is sent.
   not accessible by integration":** Code Scanning is not available on this
   repository, or the job lacks `security-events: write` (fork PRs never have
   it). Set `upload-sarif: false` there.
-- **`'**' patterns need bash 4`:** a self-hosted macOS runner with the system
-  bash 3.2. Install a newer bash, or avoid `**`.
 
 ## Security
 
