@@ -7,6 +7,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-12
+
+### Changed
+- Shorter `description` in `action.yml` (under 125 characters), as the GitHub
+  Marketplace requires. No behaviour change.
+
 ## [1.0.0] - 2026-10-12
 
 ### Added
@@ -27,5 +33,6 @@ and this project adheres to
 - SARIF upload to Code Scanning, with paths made relative to the repository
   root, and a job summary.
 
-[Unreleased]: https://github.com/vericto/check-sql/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/vericto/check-sql/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/vericto/check-sql/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/vericto/check-sql/releases/tag/v1.0.0
