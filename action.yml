@@ -1,6 +1,6 @@
 name: Vericto SQL Check
 description: >-
-  Block destructive SQL in CI. checks migrations against your Vericto rules 
+  Block destructive SQL in CI. Checks migrations against your Vericto rules 
   and annotates the pull request.
 author: Vericto
 
