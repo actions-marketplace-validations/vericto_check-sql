@@ -1,7 +1,7 @@
 name: Vericto SQL Check
 description: >-
-  Check SQL migrations and queries against your Vericto rules in CI. Findings
-  show up as Code Scanning annotations on pull requests.
+  Block destructive SQL in CI. checks migrations against your Vericto rules 
+  and annotates the pull request.
 author: Vericto
 
 branding:
