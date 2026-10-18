@@ -33,7 +33,7 @@ name=${line#"${line%%[[:space:]]*}"}
 name=${name#"${name%%[![:space:]]*}"}
 name=${name#\*}
 
-if ! printf '%s' "$expected" | grep -Eq '^[0-9a-f]{64}$'; then
+if ! matches '^[0-9a-f]{64}$' "$expected"; then
   gh_error "checksum: $sumfile does not hold a SHA-256 digest"
   exit 1
 fi

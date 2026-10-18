@@ -325,6 +325,22 @@ Releases follow [Semantic Versioning](https://semver.org). The major tag
 Actions; `@v1.0.0` or a commit SHA stays fixed. Each action release pins a
 CLI version, and a CLI bump ships as a new action release.
 
+## Tests
+
+The scripts in `scripts/` have offline unit tests (bash 3.2+, `git` and `jq`),
+run in CI on Linux and macOS:
+
+```bash
+for t in lib resolve verify-checksum install check; do bash "test/$t-test.sh"; done
+```
+
+They use local fixtures only: `test/install-test.sh` serves the release
+download from `file://` through a `curl` stand-in, and `test/check-test.sh`
+runs `check.sh` against a stand-in CLI (`test/fixtures/fake-cli/vericto`). A
+case marked `xfail` is a known bug, kept visible until it is fixed.
+`test/checksum-test.sh VERSION` checks the same gate against the real release
+asset and needs the network.
+
 ## License
 
 [Elastic License 2.0](LICENSE) (SPDX `Elastic-2.0`), the same license as the

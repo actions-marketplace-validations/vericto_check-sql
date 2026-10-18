@@ -31,7 +31,10 @@ jobs:
       - name: shellcheck
         uses: docker://koalaman/shellcheck@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d # v0.11.0
         with:
-          args: -x scripts/lib.sh scripts/resolve.sh scripts/install.sh scripts/verify-checksum.sh scripts/check.sh test/checksum-test.sh
+          args: >-
+            -x scripts/lib.sh scripts/resolve.sh scripts/install.sh scripts/verify-checksum.sh scripts/check.sh
+            test/checksum-test.sh test/harness.sh test/lib-test.sh test/resolve-test.sh
+            test/verify-checksum-test.sh test/install-test.sh test/check-test.sh test/fixtures/fake-cli/vericto
 
       - name: Every action is pinned by full commit SHA with a version comment
         shell: bash
@@ -46,6 +49,30 @@ jobs:
             echo "$bad"
             exit 1
           fi
+
+  unit:
+    name: Unit tests, offline (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # GNU (Linux) and BSD (macOS) userlands: tar, sed, mktemp, sha256sum/shasum.
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # scripts/*.sh against local fixtures and a stand-in CLI: no network.
+      - name: test/*-test.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          for t in lib resolve verify-checksum install check; do
+            echo "::group::test/$t-test.sh"
+            bash "test/$t-test.sh"
+            echo "::endgroup::"
+          done
 
   checksum:
     name: Checksum gate (tampered checksum and archive must fail)

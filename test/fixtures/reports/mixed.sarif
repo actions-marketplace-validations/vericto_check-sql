@@ -1,0 +1,35 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": { "driver": { "name": "vericto" } },
+      "results": [
+        {
+          "ruleId": "VERICTO-001",
+          "message": { "text": "[BLOCKED] DELETE without WHERE" },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "migrations/0002_cleanup.sql" } } }]
+        },
+        {
+          "ruleId": "VERICTO-050",
+          "message": { "text": "[MONITORED] full table scan" },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "/abs/path/report.sql" } } }]
+        },
+        {
+          "ruleId": "VERICTO-030",
+          "message": { "text": "[FLAGGED] SELECT without LIMIT" },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "file:///tmp/x.sql" } } }]
+        },
+        {
+          "ruleId": "parse-error",
+          "message": { "text": "Could not parse statement 3" },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "<stdin>" } } }]
+        },
+        {
+          "ruleId": "VERICTO-030",
+          "message": { "text": "[FLAGGED] SELECT without LIMIT" },
+          "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "C:/runner/x.sql" } } }]
+        }
+      ]
+    }
+  ]
+}
