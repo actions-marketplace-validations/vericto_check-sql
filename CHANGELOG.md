@@ -7,6 +7,27 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-10-18
+
+### Security
+- The default `cli-version` is now **1.8.2** (was 1.7.1). vericto-cli 1.8.2
+  fixes leaks in sanitized mode: in some dialect-specific cases (Snowflake
+  and MySQL backslash escapes, MySQL double-quoted strings, Oracle
+  quote-delimited strings, dollar-quoted strings, comments, prefixed literals
+  and numbers, unterminated quotes) part of a literal was sent as written. In
+  1.8.2 the sanitized telemetry no longer leaks literal fragments. See the
+  [CLI changelog](https://github.com/vericto/vericto-cli/blob/main/CHANGELOG.md#182---2026-10-18).
+  Workflows that pin `cli-version` are unaffected and keep the version they
+  pin; with a `sanitized` workspace, pin 1.8.2 or later. Nothing changes for a
+  workspace in `raw` mode.
+
+### Changed
+- The test fixtures (the stand-in CLI, the `file://` release in
+  `test/install-test.sh`, the versions in `test/resolve-test.sh`) and the
+  example in the `cli-version` error message use 1.8.2. The CI self-tests and
+  the checksum gate read the version from `action.yml`, so they run against
+  1.8.2.
+
 ## [1.0.2] - 2026-10-18
 
 ### Fixed
@@ -60,7 +81,8 @@ and this project adheres to
 - SARIF upload to Code Scanning, with paths made relative to the repository
   root, and a job summary.
 
-[Unreleased]: https://github.com/vericto/check-sql/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/vericto/check-sql/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/vericto/check-sql/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/vericto/check-sql/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/vericto/check-sql/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/vericto/check-sql/releases/tag/v1.0.0

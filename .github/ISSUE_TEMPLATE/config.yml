@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a problem with the vericto CLI (flags, report formats, exit codes)
+    url: https://github.com/vericto/vericto-cli/issues/new/choose
+    about: The action installs and runs vericto-cli; how `vericto check` behaves lives there.
+  - name: Propose a rule or report a wrong verdict for a SQL statement
+    url: https://github.com/vericto/vericto-engine/issues/new/choose
+    about: Rules and SQL parsing live in vericto-engine.
+  - name: Report a security vulnerability
+    url: https://github.com/vericto/check-sql/security/policy
+    about: Report it privately (security@vericto.com) instead of in a public issue. See SECURITY.md.

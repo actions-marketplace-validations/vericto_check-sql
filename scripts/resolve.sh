@@ -12,7 +12,7 @@ set -euo pipefail
 version=${VA_CLI_VERSION:-}
 version=${version#v}
 if ! matches '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' "$version"; then
-  gh_error "cli-version must be an exact release such as 1.7.1 (got '${VA_CLI_VERSION:-}'). 'latest' is not accepted: pin a version."
+  gh_error "cli-version must be an exact release such as 1.8.2 (got '${VA_CLI_VERSION:-}'). 'latest' is not accepted: pin a version."
   exit 2
 fi
 
