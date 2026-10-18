@@ -341,6 +341,11 @@ case marked `xfail` is a known bug, kept visible until it is fixed.
 `test/checksum-test.sh VERSION` checks the same gate against the real release
 asset and needs the network.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the checks CI runs, the rules for the
+scripts, and how releases are cut.
+
 ## License
 
 [Elastic License 2.0](LICENSE) (SPDX `Elastic-2.0`), the same license as the
