@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Runs `vericto check` with the action's inputs and mirrors its verdict.
 #
 # Every input arrives as an environment variable (VA_*), never interpolated

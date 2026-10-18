@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Self-test for the install-time integrity gate. Downloads the pinned release
 # asset for linux x86_64 and checks that scripts/verify-checksum.sh, the gate
 # install.sh relies on, accepts the real checksum and rejects every tampered

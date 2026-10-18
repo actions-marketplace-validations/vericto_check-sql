@@ -1,4 +1,7 @@
 # shellcheck shell=bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Helpers shared by the action's scripts. Sourced, never executed.
 # Compatible with bash 3.2 (the macOS system bash) and Git Bash on Windows.
 

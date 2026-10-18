@@ -7,6 +7,30 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-18
+
+**Now open source under the Apache License 2.0.** From this version on, the
+action is licensed under the Apache License, Version 2.0 (SPDX `Apache-2.0`)
+instead of the Elastic License 2.0. **All previously released versions, 1.0.3
+and earlier, remain under the Elastic License 2.0.** No change in behavior:
+the inputs, outputs and the default `cli-version` (1.8.2) are those of 1.0.3.
+`uses: vericto/check-sql@v1` moves to 1.1.0.
+
+### Changed
+- **License: Apache-2.0.** `LICENSE` is the Apache License 2.0 text from
+  apache.org, verbatim, which GitHub and the Marketplace detect as
+  `Apache-2.0`. New `NOTICE` (product name and copyright, Vericto S.A.S.) and
+  `TRADEMARKS.md`: the license grants no right to the Vericto name or logo.
+- The Vericto CLI that the action installs keeps its own license (the
+  Functional Source License from CLI 1.10.0, the Elastic License 2.0 up to
+  1.9.0); the README says so.
+- Every script, including the test stand-in CLI, starts with
+  `SPDX-FileCopyrightText` and `SPDX-License-Identifier: Apache-2.0` lines (the
+  REUSE convention).
+- README (License section, in English and Spanish) and CONTRIBUTING name the
+  new license. Contributions are accepted under the Apache License 2.0
+  (inbound = outbound, its section 5); no contributor agreement is needed.
+
 ## [1.0.3] - 2026-10-18
 
 ### Security
