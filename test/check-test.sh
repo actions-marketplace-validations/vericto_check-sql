@@ -95,19 +95,48 @@ run FAKE_LOG_DIR="$TMP/log" bash "$SCRIPTS/check.sh"
 expect_rc 1 "fails without the install step's binary"
 expect_out "the install step did not provide a binary" "says so"
 
-# Known bug: the validators use grep, which matches line by line, so a
-# multi-line value passes when its first line is valid and reaches the CLI as
-# one argument with a newline in it. Not a shell injection (it stays one quoted
-# argument), but the inputs are documented as rejected with exit 2.
-check "$ws" VA_API_KEY="$KEY" VA_FILES=migrations VA_DIALECT="$(printf 'postgres\n--format=text')"
-known_bug "a multi-line dialect is rejected (it reaches the CLI today)" expect_rc 2 "multi-line dialect"
-check "$ws" VA_API_KEY="$KEY" VA_FILES=migrations VA_TIMEOUT="$(printf '5\n9')"
-known_bug "a multi-line timeout is rejected (it reaches the CLI today)" expect_rc 2 "multi-line timeout"
-check "$ws" VA_API_KEY="$KEY" VA_FILES=migrations VA_API_URL="$(printf 'https://api.vericto.com\nhttp://evil.example')"
-known_bug "a multi-line api-url is rejected (it reaches the CLI today)" expect_rc 2 "multi-line api-url"
+# A value with a line break is an input error even when its first line is
+# valid: LF, CRLF, a trailing LF and a trailing CR, on every validated input.
+# (Validation used to match line by line, so these reached the CLI as one
+# argument with a newline in it.)
+while read -r var good second msg <&3; do
+  for v in "$good"$'\n'"$second" "$good"$'\r\n'"$second" "$good"$'\n' "$good"$'\r'; do
+    label="multi-line $var $(printf '%q' "$v")"
+    if [ "$var" = VA_SINCE ]; then
+      check "$ws" VA_API_KEY="$KEY" "$var=$v"
+    else
+      check "$ws" VA_API_KEY="$KEY" VA_FILES=migrations "$var=$v"
+    fi
+    expect_usage_error "$label" "$msg"
+  done
+done 3<<'EOF'
+VA_DIALECT postgres --format=text input 'dialect' must be a dialect name
+VA_TIMEOUT 5 9 input 'timeout' must be a whole number of seconds
+VA_API_URL https://api.vericto.com http://evil.example input 'api-url' must be an http(s) URL
+VA_WORKSPACE ws_1 ws_2 input 'workspace' must be a workspace ID such as ws_123
+VA_SINCE origin/main --x input 'since' must be a git ref, e.g. origin/main
+EOF
 check "$ws" VA_OIDC=true ACTIONS_ID_TOKEN_REQUEST_URL=https://token.example VA_FILES=migrations/0001_create_users.sql \
-  VA_WORKSPACE="$(printf 'ws_1\nws_2')"
-known_bug "a multi-line workspace is rejected (it reaches the CLI today)" expect_rc 2 "multi-line workspace"
+  VA_WORKSPACE=$'ws_1\nws_2'
+expect_usage_error "multi-line workspace under oidc" "input 'workspace' must be a workspace ID such as ws_123"
+for v in $'a.json\r\nb.json' $'a.json\n' $'a.json\r'; do
+  check "$ws" VA_API_KEY="$KEY" VA_FILES=migrations VA_BASELINE="$v"
+  expect_usage_error "multi-line baseline $(printf '%q' "$v")" "input 'baseline' must be a single path"
+done
+
+# Every optional input unset (a direct run, not through action.yml): set -u
+# must not abort, and no option is passed for them.
+rm -f "$TMP/log/"*
+cd "$ws"
+run VA_BIN="$FAKE" FAKE_LOG_DIR="$TMP/log" VA_API_KEY="$KEY" VA_FILES=migrations/0001_create_users.sql bash "$SCRIPTS/check.sh"
+cd "$ROOT"
+expect_rc 0 "every optional input unset"
+expect_no_out "unbound variable" "every optional input unset: no set -u abort"
+case "$(logged args)" in
+  *--dialect* | *--baseline* | *--timeout* | *--api-url* | *--since* | *--oidc*) not_ok "unset inputs add flags" "$(logged args)" ;;
+  *--stdin-file-list*) ok "every optional input unset: no flags for them" ;;
+  *) not_ok "unset inputs: files mode" "$(logged args)" ;;
+esac
 
 echo "# credentials"
 check "$ws" VA_FILES=migrations/0001_create_users.sql
@@ -355,21 +384,21 @@ expect_usage_error "changed outside git" "changed needs a git checkout: use acti
 check "$repo" VA_API_KEY="$KEY" FAKE_NO_REPORT=1
 expect_output result pass "no changed SQL: pass"
 expect_output blocked 0 "no changed SQL: counts 0"
-check "$repo" VA_API_KEY="$KEY" VA_SINCE="$(printf 'origin/main\n--x')"
-known_bug "a multi-line since is rejected (it reaches the CLI today)" expect_rc 2 "multi-line since"
+for v in $'origin/main\n--x' $'origin/main\r\n--x' $'origin/main\n'; do
+  check "$repo" VA_API_KEY="$KEY" VA_SINCE="$v"
+  expect_usage_error "multi-line since in a git checkout $(printf '%q' "$v")" "input 'since' must be a git ref, e.g. origin/main"
+done
 
-# Known bug: check.sh reads "${VA_FILES//[[:space:]]/}" under set -u, so with
-# VA_FILES unset (the script run outside action.yml, which always sets it)
-# bash 4+ aborts with "VA_FILES: unbound variable" (exit 1) instead of
-# checking the changed files. bash 3.2 treats it as empty.
+# VA_FILES unset (a direct run; action.yml always sets it), and every other
+# optional input with it: changed files, on bash 3.2 and 4+ alike (set -u
+# used to abort on bash 4+ with "VA_FILES: unbound variable").
+rm -f "$TMP/log/"*
 cd "$repo"
 run VA_BIN="$FAKE" FAKE_LOG_DIR="$TMP/log" VA_API_KEY="$KEY" bash "$SCRIPTS/check.sh"
 cd "$ROOT"
-if [ "$(bash -c 'echo "${BASH_VERSINFO[0]}"')" -ge 4 ]; then
-  known_bug "an unset VA_FILES means changed files on bash 4+" expect_rc 0 "unset VA_FILES"
-else
-  expect_rc 0 "an unset VA_FILES means changed files (bash 3.2)"
-fi
+expect_rc 0 "an unset VA_FILES means changed files"
+expect_no_out "unbound variable" "an unset VA_FILES: no set -u abort"
+expect_eq "$(changed_args)" "--changed" "an unset VA_FILES: --changed"
 
 shallow="$TMP/shallow"
 git clone -q --depth 1 "file://$repo" "$shallow"

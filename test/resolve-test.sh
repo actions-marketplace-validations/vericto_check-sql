@@ -38,13 +38,16 @@ expect_out "::error title=Vericto SQL Check::" "as an error annotation"
 run RUNNER_OS=Linux RUNNER_ARCH=X64 bash "$SCRIPTS/resolve.sh"
 expect_rc 2 "rejects a missing cli-version"
 
-# Known bug: the version check uses grep, which matches line by line, so a
-# multi-line cli-version whose first line is valid passes it. set_output then
-# stops it (exit 1, "internal: refusing a multi-line value"), so nothing is
-# downloaded, but the input error (exit 2 and its message) is not the one given.
-resolve VA_CLI_VERSION="$(printf '1.7.1\n../../evil')" RUNNER_OS=Linux RUNNER_ARCH=X64
-expect_eq "$outputs" "" "a multi-line cli-version writes no outputs"
-known_bug "a multi-line cli-version is an input error (exit 2)" expect_rc 2 "multi-line cli-version"
+# A value with a line break is an input error even when its first line is a
+# valid version (LF, CRLF, a trailing LF or CR).
+for bad in $'1.7.1\n../../evil' $'1.7.1\r\n../../evil' $'1.7.1\n' $'1.7.1\r' $'\n1.7.1'; do
+  label=$(printf '%q' "$bad")
+  resolve VA_CLI_VERSION="$bad" RUNNER_OS=Linux RUNNER_ARCH=X64
+  expect_rc 2 "rejects multi-line cli-version $label"
+  expect_out "cli-version must be an exact release such as 1.7.1" "multi-line cli-version $label: the input error"
+  expect_no_out "refusing a multi-line value" "multi-line cli-version $label: stopped before set_output"
+  expect_eq "$outputs" "" "multi-line cli-version $label: no outputs"
+done
 
 echo "# runner OS and architecture"
 while read -r os arch target ext; do

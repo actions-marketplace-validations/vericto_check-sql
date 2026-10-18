@@ -85,8 +85,6 @@ bool_input() { # NAME VALUE VAR: stores true/false in VAR
   esac
 }
 
-matches() { printf '%s' "$2" | grep -Eq "$1"; }
-
 : "${VA_BIN:?the install step did not provide a binary}"
 
 # ── Validate inputs ──────────────────────────────────────────────────────────
@@ -131,7 +129,9 @@ if [ -n "$since" ] && ! matches '^[^-[:space:][:cntrl:]][^[:space:][:cntrl:]]*$'
   fail 2 "input 'since' must be a git ref, e.g. origin/main (got '$since')"
 fi
 baseline=${VA_BASELINE:-}
-case "$baseline" in *$'\n'* | *$'\r'*) fail 2 "input 'baseline' must be a single path" ;; esac
+is_single_line "$baseline" || fail 2 "input 'baseline' must be a single path"
+# Optional: action.yml always sets it, a direct run may not (set -u).
+files=${VA_FILES:-}
 
 # ── Credentials ──────────────────────────────────────────────────────────────
 args=(check "--format=$format")
@@ -235,7 +235,7 @@ expand_files() { # OUT
   local out=$1 pat m n f i
   local -a pats found
   shopt -s nullglob
-  read -r -d '' -a pats <<<"$VA_FILES" || true
+  read -r -d '' -a pats <<<"$files" || true
   [ "${#pats[@]}" -gt 0 ] || fail 2 "input 'files' holds no patterns"
   # From here on, expand globs without word splitting.
   local IFS=''
@@ -260,7 +260,7 @@ expand_files() { # OUT
     while [ "$i" -lt "${#found[@]}" ]; do
       m=${found[$i]}
       i=$((i + 1))
-      case "$m" in *$'\n'* | *$'\r'*) fail 2 "file names with line breaks are not supported" ;; esac
+      is_single_line "$m" || fail 2 "file names with line breaks are not supported"
       m=${m#./}
       if [ -d "$m" ]; then
         while IFS= read -r f; do
@@ -277,7 +277,7 @@ expand_files() { # OUT
   awk '!seen[$0]++' "$out.raw" >"$out"
 }
 
-if [ -n "${VA_FILES//[[:space:]]/}" ]; then
+if [ -n "${files//[[:space:]]/}" ]; then
   [ "$changed" = true ] && fail 2 "set either files or changed: true, not both"
   [ -n "$since" ] && fail 2 "set either files or since, not both"
   mode=files

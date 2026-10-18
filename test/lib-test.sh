@@ -51,6 +51,24 @@ expect_eq "$outputs" "" "and writes nothing that could forge another output"
 lib 'set_output evil "$(printf "a\rb")"'
 expect_rc 1 "refuses a value with a CR"
 
+echo "# is_single_line and matches (whole-value input validation)"
+lib 'is_single_line "one line"; is_single_line ""'
+expect_rc 0 "is_single_line: one line, and the empty string"
+for v in $'a\nb' $'a\r\nb' $'a\n' $'a\r' $'\n'; do
+  run bash -c '. "$1"; is_single_line "$2"' lib "$SCRIPTS/lib.sh" "$v"
+  expect_rc 1 "is_single_line: rejects $(printf '%q' "$v")"
+done
+run bash -c '. "$1"; matches "$2" "$3"' lib "$SCRIPTS/lib.sh" '^[a-z]+$' postgres
+expect_rc 0 "matches: a valid single-line value"
+run bash -c '. "$1"; matches "$2" "$3"' lib "$SCRIPTS/lib.sh" '^[a-z]+$' Postgres
+expect_rc 1 "matches: an invalid value"
+run bash -c '. "$1"; matches "$2" "$3"' lib "$SCRIPTS/lib.sh" '[a-z]+' 'postgres;x'
+expect_rc 0 "matches: an unanchored ERE matches a substring, so validators anchor theirs"
+for v in $'postgres\nmysql' $'postgres\r\nmysql' $'postgres\n' $'postgres\r' $'\npostgres'; do
+  run bash -c '. "$1"; matches "$2" "$3"' lib "$SCRIPTS/lib.sh" '^[a-z]+$' "$v"
+  expect_rc 1 "matches: rejects $(printf '%q' "$v"), although each line matches"
+done
+
 echo "# is_windows, native_path, unix_path"
 for os in Windows MINGW64_NT-10.0 MSYS_NT CYGWIN_NT-10.0; do
   lib "RUNNER_OS=$os" 'is_windows'
