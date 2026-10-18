@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# A stand-in for the Vericto CLI in test/check-test.sh. It never contacts
+# anything.
+#
+#   vericto --version   prints "vericto $FAKE_VERSION" (default 1.7.1)
+#   vericto check ...   records its arguments, the credentials it was given
+#                       and the file list read from stdin under $FAKE_LOG_DIR,
+#                       then reports a finding for every line that starts with
+#                       "DELETE FROM" and has no WHERE, with the decision
+#                       $FAKE_DECISION (default BLOCKED).
+#
+# The report goes to --output in --format. Exit code: $FAKE_EXIT when set
+# (no report is written for a non-zero FAKE_EXIT), else 1 when a BLOCKED finding
+# exists, else 0. FAKE_REPORT copies a fixture report instead; FAKE_NO_REPORT=1
+# writes none (what the CLI does when there is nothing to check).
+set -euo pipefail
+
+if [ "${1:-}" = --version ]; then
+  echo "vericto ${FAKE_VERSION:-1.7.1}"
+  exit 0
+fi
+if [ "${1:-}" != check ]; then
+  echo "fake vericto: unexpected command: $*" >&2
+  exit 2
+fi
+shift
+
+log=${FAKE_LOG_DIR:?}
+printf '%s\n' "$@" >"$log/args"
+printf '%s' "${VERICTO_API_KEY-<unset>}" >"$log/api-key"
+printf '%s' "${VERICTO_WORKSPACE_ID-<unset>}" >"$log/workspace-id"
+
+format=sarif output="" list=false
+for a in "$@"; do
+  case "$a" in
+    --format=*) format=${a#--format=} ;;
+    --output=*) output=${a#--output=} ;;
+    --stdin-file-list) list=true ;;
+  esac
+done
+
+: >"$log/files"
+if [ "$list" = true ]; then cat >"$log/files"; fi
+
+if [ -n "${FAKE_EXIT:-}" ] && [ "$FAKE_EXIT" != 0 ]; then
+  echo "error: simulated CLI failure (exit $FAKE_EXIT)" >&2
+  exit "$FAKE_EXIT"
+fi
+
+decision=${FAKE_DECISION:-BLOCKED}
+results="" n=0
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  while IFS=: read -r line _; do
+    [ -n "$line" ] || continue
+    n=$((n + 1))
+    [ -n "$results" ] && results="$results,"
+    results="$results{\"ruleId\":\"VERICTO-001\",\"level\":\"error\",\"message\":{\"text\":\"[$decision] DELETE without WHERE\"},\"locations\":[{\"physicalLocation\":{\"artifactLocation\":{\"uri\":\"$f\"},\"region\":{\"startLine\":$line}}}]}"
+    echo "$f:$line: [$decision] VERICTO-001 DELETE without WHERE"
+  done < <(grep -n '^DELETE FROM' "$f" | grep -v 'WHERE' || true)
+done <"$log/files"
+
+blocked=0 flagged=0
+if [ "$decision" = BLOCKED ]; then blocked=$n; else flagged=$n; fi
+
+if [ -n "$output" ] && [ "${FAKE_NO_REPORT:-}" != 1 ]; then
+  if [ -n "${FAKE_REPORT:-}" ]; then
+    cp "$FAKE_REPORT" "$output"
+  else
+    case "$format" in
+      sarif) printf '{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"vericto"}},"results":[%s]}]}\n' "$results" >"$output" ;;
+      json) printf '{"summary":{"blocked":%d,"flagged":%d,"monitored":0,"parse_errors":0}}\n' "$blocked" "$flagged" >"$output" ;;
+      *) printf '[]\n' >"$output" ;;
+    esac
+  fi
+fi
+
+[ "$blocked" -gt 0 ] && exit 1
+exit 0

@@ -7,6 +7,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+- Offline unit tests for every script (`test/lib-test.sh`,
+  `test/resolve-test.sh`, `test/verify-checksum-test.sh`,
+  `test/install-test.sh`, `test/check-test.sh`), with a stand-in CLI and a
+  `file://` release fixture, run in CI on Linux and macOS and covered by
+  shellcheck. Line coverage of `scripts/` measured with kcov: 21% to 97%. No
+  behaviour change.
+
 ## [1.0.1] - 2026-10-12
 
 ### Changed
