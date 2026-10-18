@@ -26,15 +26,32 @@ $1
 EOF
 }
 
+# is_single_line VALUE: true when VALUE holds no line feed and no carriage
+# return.
+is_single_line() {
+  case "$1" in
+    *$'\n'* | *$'\r'*) return 1 ;;
+  esac
+  return 0
+}
+
+# matches ERE VALUE: true when VALUE is a single line and matches the extended
+# regex ERE as a whole (anchor ERE with ^...$). Every input validator uses
+# this. grep would not do: it matches line by line, so a multi-line value would
+# pass as long as one of its lines matched. Bash's =~ matches the whole string,
+# in bash 3.2 (the macOS runners' bash) and 5.x alike.
+matches() {
+  is_single_line "$2" || return 1
+  [[ $2 =~ $1 ]]
+}
+
 # set_output NAME VALUE. Values are single-line by construction (paths and
 # numbers); a newline would be rejected rather than allowed to forge an output.
 set_output() {
-  case "$2" in
-    *$'\n'* | *$'\r'*)
-      gh_error "internal: refusing a multi-line value for output '$1'"
-      return 1
-      ;;
-  esac
+  if ! is_single_line "$2"; then
+    gh_error "internal: refusing a multi-line value for output '$1'"
+    return 1
+  fi
   if [ -n "${GITHUB_OUTPUT:-}" ]; then
     printf '%s=%s\n' "$1" "$2" >>"$GITHUB_OUTPUT"
   else
