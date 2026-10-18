@@ -100,7 +100,7 @@ jobs:
 | `upload-sarif` | `true` | Upload the SARIF report to Code Scanning (only with `format: sarif`). |
 | `api-url` | CLI default | Vericto API base URL (`https://api.vericto.com`). |
 | `timeout` | CLI default (30) | Per-request timeout, in seconds. |
-| `cli-version` | `1.7.1` | Vericto CLI release to install. Pinned per action release; `latest` is rejected. |
+| `cli-version` | `1.8.2` | Vericto CLI release to install. Pinned per action release; `latest` is rejected. See [Sanitized mode](#sanitized-mode-needs-cli-182-or-later) before pinning an older one. |
 | `working-directory` | `.` | Where the check runs (where `.vericto.toml` lives). With `changed`, it must be the root of the checkout. |
 
 `fail_on` (which severity fails the run) is read from `.vericto.toml`; the
@@ -300,7 +300,8 @@ sending it to your Vericto workspace. What is sent, per the
 - **Sanitized when your workspace says so.** Before sending any SQL, the CLI
   reads the workspace's telemetry mode. In `sanitized` mode it replaces literal
   values with placeholders (`$1`, `$2`, ...) on the runner, so raw values never
-  leave it. Sanitization is a workspace setting, not a per-run flag.
+  leave it. Sanitization is a workspace setting, not a per-run flag. It
+  needs CLI 1.8.2 or later (see below).
 - **Fail closed.** If the workspace config can't be read, the CLI sends no SQL
   and exits with code 4.
 - **Run metadata** for the audit trail: commit SHA, ref, CI provider, run URL
@@ -310,6 +311,22 @@ sending it to your Vericto workspace. What is sent, per the
   like the SQL itself.
 
 See [Telemetry & privacy](https://vericto.com/docs/telemetry-privacy).
+
+### Sanitized mode needs CLI 1.8.2 or later
+
+Since action 1.0.3 the action installs CLI 1.8.2 by default (1.0.0 to 1.0.2
+installed 1.7.1). Before 1.8.2, the CLI's sanitizer replaced only the plain
+literals: in some dialect-specific cases (Snowflake and MySQL backslash
+escapes, MySQL double-quoted strings, Oracle `q'[...]'` strings, dollar-quoted
+strings, comments a dialect reads differently, prefixed literals and numbers,
+unterminated quotes) part of a literal was sent as written. In 1.8.2 the
+sanitized telemetry no longer leaks literal fragments: the sanitizer ends
+every literal where the dialect's own lexer ends it, and replaces whatever it
+cannot read with certainty. See the
+[CLI changelog for 1.8.2](https://github.com/vericto/vericto-cli/blob/main/CHANGELOG.md#182---2026-10-18).
+
+Nothing changes for a workspace in `raw` mode. If you pin `cli-version`, your
+pin still applies; with a `sanitized` workspace, pin `1.8.2` or later.
 
 ## Links
 

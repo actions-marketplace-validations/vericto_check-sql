@@ -248,7 +248,7 @@ if [ -s "$sarif" ]; then ok "sarif-file points at the report"; else not_ok "sari
 expect_output report-file "$sarif" "report-file is the same report"
 expect_out "Running: vericto check --format=sarif --stdin-file-list --output=" "logs the command"
 case "$(summary)" in
-  *"### Vericto SQL Check: PASS"*"| Blocked / flagged / monitored / parse errors | 0 / 0 / 0 / 0 |"*"| SQL checked | 1 file(s) from \`files\` |"*"| CLI | \`vericto 1.7.1\` |"*)
+  *"### Vericto SQL Check: PASS"*"| Blocked / flagged / monitored / parse errors | 0 / 0 / 0 / 0 |"*"| SQL checked | 1 file(s) from \`files\` |"*"| CLI | \`vericto 1.8.2\` |"*)
     ok "job summary: result, counts, selection and CLI version" ;;
   *) not_ok "job summary" "$(summary)" ;;
 esac

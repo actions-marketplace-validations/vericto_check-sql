@@ -86,7 +86,7 @@ inputs:
       Vericto CLI release to install (from github.com/vericto/vericto-cli).
       Pinned per action release; `latest` is not accepted.
     required: false
-    default: "1.7.1" # pinned-cli-version
+    default: "1.8.2" # pinned-cli-version
   working-directory:
     description: >-
       Directory to run the check from (where .vericto.toml lives). With
