@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Prints "version=X.Y.Z": the CLI version action.yml pins by default.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)

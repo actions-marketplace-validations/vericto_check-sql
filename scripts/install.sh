@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Downloads the Vericto CLI release asset for this runner, verifies its
 # SHA-256 against the release's .sha256 file BEFORE extracting it, and puts
 # the binary on PATH.

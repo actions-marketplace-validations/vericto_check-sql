@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Offline tests for scripts/resolve.sh: the CLI version (pinned, never
 # "latest"), the release asset for each runner OS/arch, unsupported runners and
 # the cache location.

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Usage: verify-checksum.sh FILE CHECKSUM_FILE
 #
 # Verifies FILE against a cargo-dist `.sha256` file: one line,

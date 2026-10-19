@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Offline tests for scripts/install.sh: download, checksum gate, cache reuse
 # and poisoning, network failures, archive contents, the version check and the
 # advisory build attestation.

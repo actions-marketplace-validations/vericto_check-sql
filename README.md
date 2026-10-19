@@ -365,8 +365,19 @@ scripts, and how releases are cut.
 
 ## License
 
-[Elastic License 2.0](LICENSE) (SPDX `Elastic-2.0`), the same license as the
-Vericto CLI, engine and proxy.
+Open source under the [Apache License 2.0](LICENSE) (SPDX `Apache-2.0`) since
+1.1.0. Versions 1.0.3 and earlier were released under the Elastic License 2.0
+and remain under it. Copyright 2026 Vericto S.A.S.; see [NOTICE](NOTICE). The
+license grants no right to the Vericto name or logo: see
+[TRADEMARKS.md](TRADEMARKS.md).
+
+The Vericto CLI that the action downloads and runs is a separate program under
+its own license: the Functional Source License (FSL-1.1-ALv2) from CLI 1.10.0,
+the Elastic License 2.0 for 1.9.0 and earlier (including the default
+`cli-version`, 1.8.2). See its
+[LICENSING.md](https://github.com/vericto/vericto-cli/blob/main/LICENSING.md).
+The Vericto service it calls is offered under its own
+[terms](https://vericto.com/terms).
 
 ---
 
@@ -404,6 +415,13 @@ steps:
 - El SQL seleccionado se envía a su espacio de trabajo para evaluarlo. Si el
   espacio está en modo `sanitized`, los valores literales se reemplazan en el
   runner antes del envío.
+
+Licencia: código abierto bajo la [Apache License 2.0](LICENSE) desde 1.1.0. Las
+versiones 1.0.3 y anteriores se publicaron bajo la Elastic License 2.0 y siguen
+bajo ella. La CLI de Vericto que la action descarga tiene su propia licencia
+(FSL-1.1-ALv2 desde la CLI 1.10.0; Elastic License 2.0 hasta la 1.9.0). La
+licencia no otorga derechos sobre la marca Vericto
+([TRADEMARKS.md](TRADEMARKS.md)).
 
 La documentación completa está en inglés, más arriba, y en
 [vericto.com/docs](https://vericto.com/docs).
