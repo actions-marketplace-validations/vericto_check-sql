@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Offline tests for scripts/verify-checksum.sh, the install gate, with local
 # fixtures generated here (test/checksum-test.sh does the same against the real
 # release asset, over the network).

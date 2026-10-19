@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Offline tests for scripts/lib.sh: workflow-command escaping, masking, step
 # outputs, path helpers, SHA-256 and temporary directories.
 #

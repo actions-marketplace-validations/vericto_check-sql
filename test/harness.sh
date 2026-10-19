@@ -1,4 +1,7 @@
 # shellcheck shell=bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Shared helpers for the offline unit tests (test/*-test.sh other than
 # checksum-test.sh). Sourced, never executed. Compatible with bash 3.2.
 #

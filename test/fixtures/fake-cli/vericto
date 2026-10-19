@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # A stand-in for the Vericto CLI in test/check-test.sh. It never contacts
 # anything.
 #

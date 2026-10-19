@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Vericto S.A.S.
+# SPDX-License-Identifier: Apache-2.0
+
 # Offline tests for scripts/check.sh with a stand-in CLI
 # (test/fixtures/fake-cli/vericto): input validation, credentials, which SQL
 # is selected (files, directories, globs, changed files), report formats,

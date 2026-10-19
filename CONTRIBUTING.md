@@ -2,7 +2,7 @@
 
 Thanks for your interest in improving the Vericto SQL Check action. This guide
 covers the composite action in this repository (`uses: vericto/check-sql@v1`),
-which is source-available under the [Elastic License 2.0](LICENSE).
+which is open source under the [Apache License 2.0](LICENSE).
 
 ## Code of Conduct
 
@@ -167,6 +167,11 @@ or email [security@vericto.com](mailto:security@vericto.com).
 
 ## License
 
-Vericto SQL Check is source-available under the [Elastic License 2.0](LICENSE).
-For questions about licensing a contribution, write to
+Vericto SQL Check is open source under the [Apache License 2.0](LICENSE) since
+1.1.0 (versions 1.0.3 and earlier remain under the Elastic License 2.0). Unless
+you state otherwise, a contribution you submit for inclusion is under the
+Apache License 2.0, as its section 5 says, without additional terms or
+conditions; no contributor agreement is needed. Add the
+`SPDX-FileCopyrightText` and `SPDX-License-Identifier: Apache-2.0` header to new
+scripts. For questions about licensing a contribution, write to
 [legal@vericto.com](mailto:legal@vericto.com) before opening the pull request.
