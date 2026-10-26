@@ -84,9 +84,10 @@ inputs:
   cli-version:
     description: >-
       Vericto CLI release to install (from github.com/vericto/vericto-cli).
-      Pinned per action release; `latest` is not accepted.
+      Pinned per action release; `latest` is not accepted. Windows ARM64
+      runners need 1.11.0 or later.
     required: false
-    default: "1.8.2" # pinned-cli-version
+    default: "1.12.0" # pinned-cli-version
   working-directory:
     description: >-
       Directory to run the check from (where .vericto.toml lives). With

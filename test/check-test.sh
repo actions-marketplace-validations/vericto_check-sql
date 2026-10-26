@@ -175,6 +175,22 @@ expect_eq "$(logged workspace-id)" ws_123 "exports VERICTO_WORKSPACE_ID"
 check "$ws" VA_OIDC=true ACTIONS_ID_TOKEN_REQUEST_URL=https://token.example VA_FILES=migrations/0001_create_users.sql
 expect_eq "$(logged workspace-id)" "<unset>" "no workspace input: left to the CLI (.vericto.toml)"
 
+echo "# offline mode (CLI 1.9.0+) is never used"
+check "$ws" VA_API_KEY="$KEY" VERICTO_OFFLINE=1 VA_FILES=migrations/0001_create_users.sql
+expect_rc 0 "a job-level VERICTO_OFFLINE=1 with an api-key"
+expect_eq "$(logged offline)" "<unset>" "VERICTO_OFFLINE does not reach the CLI"
+expect_out "::warning title=Vericto SQL Check::VERICTO_OFFLINE is set on the job; ignored here: the action always checks online against your workspace's rules." "with a warning"
+case "$(logged args)" in *--offline*) not_ok "passes --offline" "$(logged args)" ;; *) ok "never passes --offline" ;; esac
+check "$ws" VA_OIDC=true VA_WORKSPACE=ws_123 VERICTO_OFFLINE=true ACTIONS_ID_TOKEN_REQUEST_URL=https://token.example \
+  VA_FILES=migrations/0001_create_users.sql
+expect_rc 0 "VERICTO_OFFLINE with oidc (the CLI would exit 2)"
+expect_eq "$(logged offline)" "<unset>" "oidc: VERICTO_OFFLINE does not reach the CLI"
+check "$ws" VA_API_KEY="$KEY" VERICTO_OFFLINE= VA_FILES=migrations/0001_create_users.sql
+expect_eq "$(logged offline)" "<unset>" "an empty VERICTO_OFFLINE is unset too"
+expect_no_out "VERICTO_OFFLINE is set" "an empty VERICTO_OFFLINE: no warning"
+check "$ws" VA_API_KEY="$KEY" VA_FILES=migrations/0001_create_users.sql
+expect_no_out "VERICTO_OFFLINE" "no VERICTO_OFFLINE: no warning"
+
 echo "# CLI arguments"
 check "$ws" VA_API_KEY="$KEY" VA_FILES=migrations/0001_create_users.sql VA_DIALECT=mysql VA_BASELINE="base line.json" \
   VA_TIMEOUT=45 VA_API_URL=https://eu.vericto.example
@@ -251,7 +267,7 @@ if [ -s "$sarif" ]; then ok "sarif-file points at the report"; else not_ok "sari
 expect_output report-file "$sarif" "report-file is the same report"
 expect_out "Running: vericto check --format=sarif --stdin-file-list --output=" "logs the command"
 case "$(summary)" in
-  *"### Vericto SQL Check: PASS"*"| Blocked / flagged / monitored / parse errors | 0 / 0 / 0 / 0 |"*"| SQL checked | 1 file(s) from \`files\` |"*"| CLI | \`vericto 1.8.2\` |"*)
+  *"### Vericto SQL Check: PASS"*"| Blocked / flagged / monitored / parse errors | 0 / 0 / 0 / 0 |"*"| SQL checked | 1 file(s) from \`files\` |"*"| CLI | \`vericto 1.12.0\` |"*)
     ok "job summary: result, counts, selection and CLI version" ;;
   *) not_ok "job summary" "$(summary)" ;;
 esac

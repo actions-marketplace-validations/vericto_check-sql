@@ -97,21 +97,21 @@ install() { # [VAR=VALUE ...]
 GITHUB_PATH_FILE="$TMP/github_path"
 
 asset=vericto-cli-x86_64-unknown-linux-musl.tar.xz
-release v1.8.2 "$asset"
-cache="$TMP/cache/vericto-cli/1.8.2/x86_64-unknown-linux-musl"
+release v1.12.0 "$asset"
+cache="$TMP/cache/vericto-cli/1.12.0/x86_64-unknown-linux-musl"
 
 echo "# fresh download"
-install VA_VERSION=1.8.2 VA_ASSET="$asset" VA_CACHE_DIR="$cache"
+install VA_VERSION=1.12.0 VA_ASSET="$asset" VA_CACHE_DIR="$cache"
 expect_rc 0 "installs the pinned release"
 bin=$(output_of bin)
 expect_eq "$(basename "$bin")" vericto "bin output names the binary"
-if [ -x "$bin" ] && [ "$("$bin" --version)" = "vericto 1.8.2" ]; then ok "the binary is executable and is the release"; else not_ok "installed binary" "$bin"; fi
-expect_output version 1.8.2 "version output"
+if [ -x "$bin" ] && [ "$("$bin" --version)" = "vericto 1.12.0" ]; then ok "the binary is executable and is the release"; else not_ok "installed binary" "$bin"; fi
+expect_output version 1.12.0 "version output"
 expect_eq "$(cat "$GITHUB_PATH_FILE")" "$(dirname "$bin")" "adds the binary's directory to GITHUB_PATH"
 expect_out "SHA-256 OK: $asset" "verifies the checksum before extracting"
-expect_out "Installed vericto 1.8.2 to" "logs the install"
-expect_eq "$(cat "$CURL_LOG")" "https://github.com/vericto/vericto-cli/releases/download/v1.8.2/$asset.sha256
-https://github.com/vericto/vericto-cli/releases/download/v1.8.2/$asset" "downloads the checksum, then the archive, from the release"
+expect_out "Installed vericto 1.12.0 to" "logs the install"
+expect_eq "$(cat "$CURL_LOG")" "https://github.com/vericto/vericto-cli/releases/download/v1.12.0/$asset.sha256
+https://github.com/vericto/vericto-cli/releases/download/v1.12.0/$asset" "downloads the checksum, then the archive, from the release"
 if [ -f "$cache/$asset" ]; then ok "keeps the verified archive in the cache dir"; else not_ok "cache populated"; fi
 expect_out "no token; skipped the build attestation check (the SHA-256 check passed)." "attestation is skipped without a token"
 case "$bin" in "$TMP"/vericto-bin.*) ok "the binary lives in a fresh directory under RUNNER_TEMP" ;; *) not_ok "bin location" "$bin" ;; esac
@@ -119,17 +119,17 @@ leftover=$(find "$TMP" -maxdepth 1 -name 'vericto-install.*')
 expect_eq "$leftover" "" "removes its work directory"
 
 echo "# cache"
-install VA_VERSION=1.8.2 VA_ASSET="$asset" VA_CACHE_DIR="$cache"
+install VA_VERSION=1.12.0 VA_ASSET="$asset" VA_CACHE_DIR="$cache"
 expect_rc 0 "installs from the cache"
 expect_out "Using the cached archive (checksum re-verified)." "re-verifies the cached archive"
-expect_eq "$(cat "$CURL_LOG")" "https://github.com/vericto/vericto-cli/releases/download/v1.8.2/$asset.sha256" "downloads only the checksum"
+expect_eq "$(cat "$CURL_LOG")" "https://github.com/vericto/vericto-cli/releases/download/v1.12.0/$asset.sha256" "downloads only the checksum"
 expect_no_out "attestation" "no attestation check for a cached archive"
 
 printf 'x' >>"$cache/$asset"
-install VA_VERSION=1.8.2 VA_ASSET="$asset" VA_CACHE_DIR="$cache"
+install VA_VERSION=1.12.0 VA_ASSET="$asset" VA_CACHE_DIR="$cache"
 expect_rc 0 "a poisoned cache is replaced"
 expect_out "::warning title=Vericto SQL Check::the cached $asset does not match the release checksum; downloading it again." "warns about the poisoned cache"
-if run bash "$SCRIPTS/verify-checksum.sh" "$cache/$asset" "$RELEASES/v1.8.2/$asset.sha256" && [ "$rc" = 0 ]; then
+if run bash "$SCRIPTS/verify-checksum.sh" "$cache/$asset" "$RELEASES/v1.12.0/$asset.sha256" && [ "$rc" = 0 ]; then
   ok "the cache now holds the verified archive"
 else
   not_ok "cache after re-download" "$out"
@@ -151,7 +151,7 @@ install VA_VERSION=0.0.0 VA_ASSET="$asset" VA_CACHE_DIR="$TMP/cache-none"
 expect_rc 1 "a missing checksum download fails"
 expect_out "could not download https://github.com/vericto/vericto-cli/releases/download/v0.0.0/$asset.sha256. Does release v0.0.0 exist?" "names the URL and the release"
 mkdir -p "$RELEASES/v1.7.3"
-cp "$RELEASES/v1.8.2/$asset.sha256" "$RELEASES/v1.7.3/"
+cp "$RELEASES/v1.12.0/$asset.sha256" "$RELEASES/v1.7.3/"
 install VA_VERSION=1.7.3 VA_ASSET="$asset" VA_CACHE_DIR="$TMP/cache-3"
 expect_rc 1 "a failed archive download fails"
 expect_out "could not download https://github.com/vericto/vericto-cli/releases/download/v1.7.3/$asset" "names the archive URL"
@@ -175,8 +175,8 @@ expect_out "unknown archive type: vericto-cli-x86_64-unknown-linux-musl.tar.gz" 
 
 if command -v unzip >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
   zip_asset=vericto-cli-x86_64-pc-windows-msvc.zip
-  release v1.8.2 "$zip_asset"
-  install VA_VERSION=1.8.2 VA_ASSET="$zip_asset" VA_CACHE_DIR="$TMP/cache-zip"
+  release v1.12.0 "$zip_asset"
+  install VA_VERSION=1.12.0 VA_ASSET="$zip_asset" VA_CACHE_DIR="$TMP/cache-zip"
   expect_rc 0 "installs a .zip asset (Windows layout)"
   expect_eq "$(basename "$(output_of bin)")" vericto.exe "bin output is vericto.exe"
 else
@@ -185,20 +185,20 @@ fi
 
 echo "# build attestation (advisory)"
 : >"$GH_LOG"
-install VA_VERSION=1.8.2 VA_ASSET="$asset" VA_CACHE_DIR="$TMP/cache-a1" VA_GH_TOKEN=ghs_test FAKE_GH=ok
+install VA_VERSION=1.12.0 VA_ASSET="$asset" VA_CACHE_DIR="$TMP/cache-a1" VA_GH_TOKEN=ghs_test FAKE_GH=ok
 expect_rc 0 "a verified attestation"
 expect_out "Build attestation verified: $asset was built by vericto/vericto-cli." "logs it"
 case "$(cat "$GH_LOG")" in
   "attestation verify $TMP/cache-a1/$asset --repo vericto/vericto-cli|GH_TOKEN=ghs_test") ok "asks gh with the token for the cached archive" ;;
   *) not_ok "gh invocation" "$(cat "$GH_LOG")" ;;
 esac
-install VA_VERSION=1.8.2 VA_ASSET="$asset" VA_CACHE_DIR="$TMP/cache-a2" VA_GH_TOKEN=ghs_test FAKE_GH=fail
+install VA_VERSION=1.12.0 VA_ASSET="$asset" VA_CACHE_DIR="$TMP/cache-a2" VA_GH_TOKEN=ghs_test FAKE_GH=fail
 expect_rc 0 "a failed attestation only warns: the checksum is the gate"
 expect_out "::warning title=Vericto SQL Check::could not verify the build attestation of $asset (the SHA-256 check passed): line one line two no attestations found" "with the tail of gh's output"
 tools=(bash env curl tar xz gzip mkdir mktemp rm mv cp chmod grep tr sed basename dirname sha256sum shasum perl openssl cat tail uname)
 minimal=$(minimal_path "$TMP/no-gh" "${tools[@]}")
 ln -sf "$SHIM/curl" "$minimal/curl"
-INSTALL_PATH="$minimal" install VA_VERSION=1.8.2 VA_ASSET="$asset" VA_CACHE_DIR="$TMP/cache-a3" VA_GH_TOKEN=ghs_test
+INSTALL_PATH="$minimal" install VA_VERSION=1.12.0 VA_ASSET="$asset" VA_CACHE_DIR="$TMP/cache-a3" VA_GH_TOKEN=ghs_test
 expect_rc 0 "installs without gh"
 expect_out "gh not found; skipped the build attestation check (the SHA-256 check passed)." "with a notice"
 
