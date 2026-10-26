@@ -5,9 +5,10 @@
 # A stand-in for the Vericto CLI in test/check-test.sh. It never contacts
 # anything.
 #
-#   vericto --version   prints "vericto $FAKE_VERSION" (default 1.8.2)
-#   vericto check ...   records its arguments, the credentials it was given
-#                       and the file list read from stdin under $FAKE_LOG_DIR,
+#   vericto --version   prints "vericto $FAKE_VERSION" (default 1.12.0)
+#   vericto check ...   records its arguments, the credentials it was given,
+#                       VERICTO_OFFLINE and the file list read from stdin
+#                       under $FAKE_LOG_DIR,
 #                       then reports a finding for every line that starts with
 #                       "DELETE FROM" and has no WHERE, with the decision
 #                       $FAKE_DECISION (default BLOCKED).
@@ -19,7 +20,7 @@
 set -euo pipefail
 
 if [ "${1:-}" = --version ]; then
-  echo "vericto ${FAKE_VERSION:-1.8.2}"
+  echo "vericto ${FAKE_VERSION:-1.12.0}"
   exit 0
 fi
 if [ "${1:-}" != check ]; then
@@ -32,6 +33,7 @@ log=${FAKE_LOG_DIR:?}
 printf '%s\n' "$@" >"$log/args"
 printf '%s' "${VERICTO_API_KEY-<unset>}" >"$log/api-key"
 printf '%s' "${VERICTO_WORKSPACE_ID-<unset>}" >"$log/workspace-id"
+printf '%s' "${VERICTO_OFFLINE-<unset>}" >"$log/offline"
 
 format=sarif output="" list=false
 for a in "$@"; do
