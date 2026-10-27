@@ -77,9 +77,10 @@ API.
 4. Open a PR using the template. Keep PRs focused and under ~500 lines.
 
 CI also runs the action itself (`uses: ./`) on `ubuntu-latest`,
-`ubuntu-24.04-arm`, `macos-latest` and `windows-latest`: without credentials,
-against an unreachable API, with OIDC but no `id-token` permission, and with
-hostile inputs. The live check against the Vericto API runs only where the
+`ubuntu-24.04-arm`, `macos-latest`, `windows-latest` and `windows-11-arm`:
+without credentials, against an unreachable API (with `VERICTO_OFFLINE=1` on
+the step, which the action must ignore), with OIDC but no `id-token`
+permission, and with hostile inputs. The live check against the Vericto API runs only where the
 `VERICTO_API_KEY` secret is available, so not on pull requests from forks.
 
 ### Rules for the scripts

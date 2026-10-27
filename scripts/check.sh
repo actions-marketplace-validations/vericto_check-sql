@@ -154,6 +154,16 @@ elif [ -z "${VERICTO_API_KEY:-}" ]; then
 fi
 unset VA_API_KEY
 
+# The action always checks online, against the workspace's own policy. Since
+# CLI 1.9.0, VERICTO_OFFLINE=1 switches `vericto check` to the embedded engine's
+# standard rules only (no custom rules, overrides or audit trail), and with
+# --oidc it is a usage error. A job-level VERICTO_OFFLINE, meant for another
+# step, must not quietly weaken this check: it is ignored here.
+if [ -n "${VERICTO_OFFLINE:-}" ]; then
+  gh_warning "VERICTO_OFFLINE is set on the job; ignored here: the action always checks online against your workspace's rules."
+fi
+unset VERICTO_OFFLINE
+
 [ -n "$dialect" ] && args+=("--dialect=$dialect")
 [ -n "$baseline" ] && args+=("--baseline=$baseline")
 [ -n "$timeout" ] && args+=("--timeout=$timeout")

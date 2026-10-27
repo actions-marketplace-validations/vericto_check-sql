@@ -15,7 +15,7 @@ set -euo pipefail
 version=${VA_CLI_VERSION:-}
 version=${version#v}
 if ! matches '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$' "$version"; then
-  gh_error "cli-version must be an exact release such as 1.8.2 (got '${VA_CLI_VERSION:-}'). 'latest' is not accepted: pin a version."
+  gh_error "cli-version must be an exact release such as 1.12.0 (got '${VA_CLI_VERSION:-}'). 'latest' is not accepted: pin a version."
   exit 2
 fi
 
@@ -41,8 +41,18 @@ case "$os/$arch" in
   macOS/X64) target=x86_64-apple-darwin ext=tar.xz ;;
   macOS/ARM64) target=aarch64-apple-darwin ext=tar.xz ;;
   Windows/X64) target=x86_64-pc-windows-msvc ext=zip ;;
+  Windows/ARM64)
+    # vericto-cli publishes a native Windows ARM64 build from 1.11.0 on.
+    major=${version%%.*} rest=${version#*.}
+    minor=${rest%%.*}
+    if [ "$major" -lt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -lt 11 ]; }; then
+      gh_error "Windows ARM64 runners need cli-version 1.11.0 or later (got '$version'): earlier CLI releases have no Windows ARM64 build."
+      exit 2
+    fi
+    target=aarch64-pc-windows-msvc ext=zip
+    ;;
   *)
-    gh_error "unsupported runner '$os/$arch'. Supported: Linux X64/ARM64, macOS X64/ARM64, Windows X64."
+    gh_error "unsupported runner '$os/$arch'. Supported: Linux X64/ARM64, macOS X64/ARM64, Windows X64/ARM64."
     exit 2
     ;;
 esac

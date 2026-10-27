@@ -7,6 +7,60 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-25
+
+**The default CLI moves to 1.12.0, and Windows ARM64 runners are supported.**
+`uses: vericto/check-sql@v1` moves to 1.2.0. Workflows that pin `cli-version`
+keep the version they pin. Inputs, outputs and exit codes are unchanged.
+
+### Security
+- The default `cli-version` is now **1.12.0** (was 1.8.2). Among the CLI
+  changes since 1.8.2 that reach this action: 1.12.0 updates rustls-webpki and
+  webpki-roots (RUSTSEC-2026-0382, RUSTSEC-2026-0381), so the TLS connection
+  to the Vericto API no longer trusts distrusted intermediates; 1.11.0 checks
+  SQL files saved with a UTF-8 byte-order mark instead of letting them through
+  as a parse error, and reads UTF-16 files with a BOM. See the
+  [CLI changelog](https://github.com/vericto/vericto-cli/blob/main/CHANGELOG.md#1120---2026-10-22).
+  The download is verified as before, against the release's `.sha256` file
+  before extraction; the 1.12.0 assets were checked against `sha256.sum` and
+  their Sigstore build attestations before this release.
+- **A job-level `VERICTO_OFFLINE` is ignored.** CLI 1.9.0 added an offline
+  mode (`--offline` or `VERICTO_OFFLINE=1`) that checks with the embedded
+  engine's standard rules only, without the workspace's custom rules,
+  overrides, sensitive columns or audit trail. With the variable set on the
+  job, the action would have checked offline with an `api-key`, or failed with
+  exit 2 with `oidc: true`. `check.sh` now unsets it before running the CLI and
+  logs a warning when it was set, so the action always checks online. The
+  rest of the 1.9.0 change does not affect the action: in CI a missing
+  credential is still exit 3 (the action fails with 3 before the CLI runs),
+  and an unreachable API is still exit 4, never an offline verdict.
+
+### Added
+- **Windows ARM64 runners** (`windows-11-arm`), with CLI 1.11.0 or later,
+  which publishes a native `vericto-cli-aarch64-pc-windows-msvc.zip`. With an
+  older `cli-version` on Windows ARM64, the action stops with exit 2 and says
+  so instead of failing on a missing download.
+
+### Changed
+- Reports from CLI 1.9.0 and later carry the check mode: JSON has top-level
+  `mode` and `engine_version`, SARIF a run `properties` bag. The action's
+  outputs (`blocked`, `flagged`, `monitored`, `parse-errors`, `result`) are
+  read from the same fields as before and are unchanged.
+- CLI 1.11.0 reports Windows paths with `/` in SARIF and annotations, so on
+  Windows runners Code Scanning annotations attach to files like on Linux.
+- The test fixtures (the stand-in CLI, the `file://` release in
+  `test/install-test.sh`, the versions in `test/resolve-test.sh`) and the
+  example in the `cli-version` error message use 1.12.0. The CI self-test runs
+  on `windows-11-arm` too, and its unreachable-API case sets
+  `VERICTO_OFFLINE=1` on the step to prove it is ignored.
+
+### Fixed
+- The README and the 1.1.0 notes said the Vericto CLI was under the Elastic
+  License 2.0 "up to 1.9.0". Per the CLI's `LICENSING.md`, versions 1.9.1 and
+  earlier are under the Elastic License 2.0 and 1.10.0 and later under
+  FSL-1.1-ALv2. The README (English and Spanish) now says so; the default CLI,
+  1.12.0, is under FSL-1.1-ALv2.
+
 ## [1.1.0] - 2026-10-18
 
 **Now open source under the Apache License 2.0.** From this version on, the

@@ -99,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest, windows-11-arm]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -135,10 +135,14 @@ jobs:
           test "$RESULT" = fail
 
       # 2. The CLI runs end to end (cached install, globs, key via env) against
-      #    an address nothing listens on: no verdict, exit 4, no SARIF.
+      #    an address nothing listens on: no verdict, exit 4, no SARIF. A
+      #    job-level VERICTO_OFFLINE=1 is ignored: offline mode (CLI 1.9.0+)
+      #    would answer locally (exit 1 on the fixtures' DELETE) instead.
       - name: "Action: API unreachable"
         id: offline
         continue-on-error: true
+        env:
+          VERICTO_OFFLINE: "1"
         uses: ./
         with:
           api-key: vtro_selftest_not_a_real_key
