@@ -1,10 +1,26 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "com.vericto/sql-firewall",
-  "title": "Vericto SQL Firewall",
-  "description": "Check SQL against your Vericto rules before it runs: blocks destructive or risky statements.",
-  "version": "1.0.0",
+  "name": "com.vericto/mcp",
+  "title": "Vericto: database guardrails for AI agents",
+  "description": "Database guardrails for AI agents: check SQL against your Vericto rules before it runs.",
+  "version": "1.1.0",
   "websiteUrl": "https://vericto.com/docs/mcp",
+  "icons": [
+    {
+      "src": "https://vericto.com/favicon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": [
+        "any"
+      ]
+    },
+    {
+      "src": "https://vericto.com/apple-touch-icon.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "180x180"
+      ]
+    }
+  ],
   "remotes": [
     {
       "type": "streamable-http",
@@ -12,7 +28,7 @@
       "headers": [
         {
           "name": "X-API-Key",
-          "description": "Vericto API key (dashboard > Settings > API keys)",
+          "description": "Vericto API key with only the ci_dryrun:execute scope (Dashboard > API Keys)",
           "isRequired": true,
           "isSecret": true
         }

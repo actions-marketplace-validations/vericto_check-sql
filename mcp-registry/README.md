@@ -1,7 +1,8 @@
 # MCP Registry entry
 
 `server.json` is the entry published to the official MCP Registry
-(<https://registry.modelcontextprotocol.io>) as `com.vericto/sql-firewall`: the
+(<https://registry.modelcontextprotocol.io>) as `com.vericto/mcp` (formerly
+`com.vericto/sql-firewall`): the
 remote Vericto MCP server at `https://mcp.vericto.com/mcp` (streamable HTTP,
 `X-API-Key` header). It is kept here so anyone can see exactly what is listed.
 
