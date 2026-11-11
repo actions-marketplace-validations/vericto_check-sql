@@ -7,6 +7,83 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-10
+
+**The default CLI moves to 2.0.0, which is open source under the AGPL.**
+`uses: vericto/check-sql@v1` moves to 1.4.0. Workflows that pin `cli-version`
+keep the version they pin. Inputs, outputs and exit codes are unchanged, and
+online checks are unchanged: they use your workspace's rules on the server's
+engine, as always. **Offline verdicts can change** (see "Upgrade notes").
+
+### Upgrade notes
+- **Offline verdicts can change.** CLI 1.13.0 moved offline mode to
+  `vericto-engine` 4.7.0 (from 4.3.0, the engine in CLI 1.12.0), and 2.0.0
+  embeds engine 5.0.0, which changes no rule, severity or evaluation code from
+  4.7.1. The engine's standard rules now see the same destructive operation
+  through more equivalent SQL forms, so an offline run (`offline: true`, or no
+  credential with `offline: auto`) can now fail with exit 1 on SQL it passed
+  before. Examples from the
+  [CLI 1.13.0 upgrade notes](https://github.com/vericto/vericto-cli/blob/main/CHANGELOG.md#1130---2026-10-31),
+  with what CLI 1.12.x reported:
+  - `DELETE FROM users WHERE NULL IS NULL` is BLOCKED by VERICTO-003 (was
+    ALLOWED);
+  - `UPDATE users SET active = false WHERE 1 IN (1, NULL)` on MySQL by
+    VERICTO-030 (was ALLOWED);
+  - `... WHERE status = 'active' OR NULL IS NULL` by VERICTO-090 (was FLAGGED
+    by VERICTO-050);
+  - Snowflake `INSERT INTO t (SELECT * FROM s)` by VERICTO-040 (was FLAGGED by
+    VERICTO-051);
+  - SQL Server `SELECT * INTO #users_copy FROM users` by VERICTO-084 (was
+    FLAGGED by VERICTO-050).
+
+  All five were re-checked with CLI 1.12.0 and 2.0.0 before this release.
+  To see what moves before enforcing, run `vericto check --offline --monitor`
+  once locally, or keep `cli-version: "1.12.0"` until you have. Intentional
+  copies and all-row operations can be allowed with an inline
+  `-- vericto:ignore[...]` or a baseline, or, online, in the workspace's rules.
+  The number of standard rules (42) and their default severities are
+  unchanged.
+- Offline reports, and the job summary's `Mode` row, name engine `5.0.0` and
+  `ruleset_version` `standard@engine-5.0.0` (was `4.3.0` and
+  `standard@engine-4.3.0`).
+
+### Changed
+- The default `cli-version` is now **2.0.0** (was 1.12.0). Its assets keep the
+  names and the `.sha256` format `scripts/install.sh` expects on all six
+  runner targets; the download is verified as before, against the release's
+  `.sha256` file before extraction, and the installed binary must report
+  `vericto 2.0.0`. The 2.0.0 assets were checked against their `.sha256` files
+  and Sigstore build attestations before this release. The CLI's other
+  changes since 1.12.0 do not affect the action: it always runs
+  `vericto check`, never a bare `vericto` (which exits 0 from CLI 1.13.3), and
+  the CLI's pre-commit hooks (1.13.1) are a separate way to run it.
+- The action's own test fixtures give the same verdicts with 2.0.0 as with
+  1.12.0: `DELETE FROM users` is BLOCKED by VERICTO-001 offline, and the other
+  fixtures pass.
+- README (and the Marketplace listing, which shows it): the top now says what
+  the action does in one line, that no account is needed, a minimal offline
+  workflow to copy (9 lines, `offline: true` and `upload-sarif: false`, so it
+  needs no `permissions`) and a demo GIF of `vericto check --offline` on a
+  `DELETE` without `WHERE` (BLOCKED) and a `DROP TABLE` (FLAGGED). The
+  previous no-account quick start, with Code Scanning, is now "Full setup (no
+  account)"; the API key and OIDC sections follow unchanged. Pins `@v1.4.0`
+  (Versioning, SHA pin example).
+- New `docs/assets/`: the demo GIF (about 140 KB) and the `vhs` tape that
+  records it with the real CLI, so it can be re-recorded for a new CLI pin.
+- `mcp-registry/server.json`: the entry is listed as `com.vericto/mcp`
+  (formerly `com.vericto/sql-firewall`), version 1.1.0, with the registry's
+  current title, description, icons and API key description.
+
+### License
+- **The default CLI, 2.0.0, is open source under the GNU Affero General Public
+  License, version 3 only (AGPL-3.0-only),** and free to use in production,
+  including commercially; a commercial license from Vericto S.A.S. is
+  available for closed or embedded use. Earlier CLI releases keep their
+  license: FSL-1.1-ALv2 for 1.10.0 to 1.13.3 (including 1.12.0, the default of
+  action 1.2.0 to 1.3.0) and the Elastic License 2.0 for 1.9.1 and earlier.
+  The action itself stays under the Apache License 2.0. README (English and
+  Spanish) and `TRADEMARKS.md` say so.
+
 ## [1.3.0] - 2026-10-30
 
 **Check SQL without an account.** A new `offline` input runs
@@ -206,7 +283,8 @@ the inputs, outputs and the default `cli-version` (1.8.2) are those of 1.0.3.
 - SARIF upload to Code Scanning, with paths made relative to the repository
   root, and a job summary.
 
-[Unreleased]: https://github.com/vericto/check-sql/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/vericto/check-sql/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/vericto/check-sql/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/vericto/check-sql/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/vericto/check-sql/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/vericto/check-sql/compare/v1.0.3...v1.1.0

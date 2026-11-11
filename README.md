@@ -1,10 +1,38 @@
 # Vericto SQL Check
 
-A GitHub Action that checks the SQL in your pull requests (migrations, ad-hoc
-scripts, generated queries) before it runs anywhere: offline against
-[Vericto](https://vericto.com)'s standard rules, with no account, or online
-against your Vericto workspace's rules. Findings appear as Code Scanning
-annotations on the PR, and a blocked statement fails the job.
+Blocks destructive SQL in pull requests, and shows the rule, the line and a
+suggested fix for each finding.
+
+**No account needed.** Offline mode checks on the runner with Vericto's 42
+standard rules: no sign-up, no API key, and no SQL leaves the runner.
+
+```yaml
+on: pull_request
+jobs:
+  vericto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - uses: vericto/check-sql@v1
+        with: { offline: true, upload-sarif: false }
+```
+
+Save it as `.github/workflows/vericto.yml`. The action checks the `*.sql`
+files the pull request changes: an unbounded `DELETE` or `UPDATE` is BLOCKED
+and fails the job, and schema changes such as `DROP TABLE` are FLAGGED. The
+findings appear in the log, the job summary and as annotations on the pull
+request. To also send them to Code Scanning, see the
+[full setup](#full-setup-no-account).
+
+![vericto check --offline on two migrations: the DELETE without WHERE is BLOCKED by VERICTO-001 with a suggested WHERE clause, the DROP TABLE is FLAGGED by VERICTO-010](docs/assets/check-sql-demo.gif)
+
+Offline, each file reports its strongest finding at line 1. Online, with a
+Vericto workspace ([API key](#quick-start-api-key) or [OIDC](#oidc-no-long-lived-secret)),
+every statement is reported at its own line and checked against your
+workspace's rules. See [Offline and online](#offline-and-online).
+
+## How it works
 
 The action wraps [`vericto check`](https://github.com/vericto/vericto-cli) from
 the Vericto CLI. It downloads a pinned CLI release, verifies its SHA-256 before
@@ -20,9 +48,10 @@ extracting it, runs the check and uploads the SARIF report.
 - Exits with the CLI's code, so a block fails the build and an outage is not
   mistaken for a pass.
 
-## Quick start (no account)
+## Full setup (no account)
 
-Add `.github/workflows/vericto.yml`:
+This workflow also uploads the findings to Code Scanning and runs only when a
+pull request changes SQL. Add it as `.github/workflows/vericto.yml`:
 
 ```yaml
 name: Vericto SQL check
@@ -120,7 +149,7 @@ jobs:
 |---|---|---|
 | Account, key | none | a Vericto workspace; API key or OIDC |
 | Network | none: no SQL leaves the runner | the selected SQL goes to your workspace, sanitized if it says so |
-| Rules | the CLI's standard rules (42 in CLI 1.12.0), at their default severities | your workspace's rules: the standard rules with your overrides, plus custom rules |
+| Rules | the CLI's standard rules (42 in CLI 2.0.0), at their default severities | your workspace's rules: the standard rules with your overrides, plus custom rules |
 | Business policies, sensitive columns, masking | no | yes |
 | Granularity | one result per file, with its strongest finding, at line 1 | one result per statement, at its line |
 | Check history and audit trail in the dashboard | no record anywhere | every check recorded, with the commit, run and actor |
@@ -133,7 +162,7 @@ workspace's policy and not evidence that a check took place. Every offline
 result says so: the CLI titles its annotations `Vericto (offline)`, the SARIF
 and JSON reports carry `"mode": "offline"` and the engine version, the job
 summary has a `Mode` row, and the `mode` output is `offline`. Offline needs
-CLI 1.9.0 or later (1.11.0 on Windows runners); the default, 1.12.0, has it.
+CLI 1.9.0 or later (1.11.0 on Windows runners); the default, 2.0.0, has it.
 The CLI's [offline mode](https://github.com/vericto/vericto-cli#offline-mode)
 has the details.
 
@@ -176,7 +205,7 @@ has the details.
 | `upload-sarif` | `true` | Upload the SARIF report to Code Scanning (only with `format: sarif`). |
 | `api-url` | CLI default | Vericto API base URL (`https://api.vericto.com`). |
 | `timeout` | CLI default (30) | Per-request timeout, in seconds. |
-| `cli-version` | `1.12.0` | Vericto CLI release to install. Pinned per action release; `latest` is rejected. See [Sanitized mode](#sanitized-mode-needs-cli-182-or-later) before pinning an older one; Windows ARM64 runners need 1.11.0 or later. |
+| `cli-version` | `2.0.0` | Vericto CLI release to install. Pinned per action release; `latest` is rejected. See [Sanitized mode](#sanitized-mode-needs-cli-182-or-later) before pinning an older one; Windows ARM64 runners need 1.11.0 or later. |
 | `working-directory` | `.` | Where the check runs (where `.vericto.toml` lives). With `changed`, it must be the root of the checkout. |
 
 `fail_on` (which severity fails the run) is read from `.vericto.toml`; the
@@ -376,7 +405,7 @@ changed, the check passes and no SQL is sent.
   single argument.
 - **Pinned dependencies.** Every action this action uses is pinned by commit
   SHA. You can pin this action the same way:
-  `uses: vericto/check-sql@<full commit SHA> # v1.3.0`.
+  `uses: vericto/check-sql@<full commit SHA> # v1.4.0`.
 
 Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
@@ -422,8 +451,9 @@ cannot read with certainty. See the
 [CLI changelog for 1.8.2](https://github.com/vericto/vericto-cli/blob/main/CHANGELOG.md#182---2026-10-18).
 
 Nothing changes for a workspace in `raw` mode. If you pin `cli-version`, your
-pin still applies; with a `sanitized` workspace, pin `1.8.2` or later. Since
-action 1.2.0 the default is CLI 1.12.0.
+pin still applies; with a `sanitized` workspace, pin `1.8.2` or later. The
+default was CLI 1.12.0 from action 1.2.0 to 1.3.0, and is CLI 2.0.0 since
+action 1.4.0.
 
 ## Links
 
@@ -436,7 +466,7 @@ action 1.2.0 the default is CLI 1.12.0.
 
 Releases follow [Semantic Versioning](https://semver.org). The major tag
 (`v1`) moves to each compatible release, the usual convention for GitHub
-Actions; `@v1.3.0` or a commit SHA stays fixed. Each action release pins a
+Actions; `@v1.4.0` or a commit SHA stays fixed. Each action release pins a
 CLI version, and a CLI bump ships as a new action release.
 
 ## Tests
@@ -469,9 +499,15 @@ license grants no right to the Vericto name or logo: see
 [TRADEMARKS.md](TRADEMARKS.md).
 
 The Vericto CLI that the action downloads and runs is a separate program under
-its own license: the Functional Source License (FSL-1.1-ALv2) from CLI 1.10.0,
-the Elastic License 2.0 for 1.9.1 and earlier. The default `cli-version`,
-1.12.0, is under FSL-1.1-ALv2. See its
+its own license. From CLI 2.0.0 it is open source under the GNU Affero General
+Public License, version 3 only (AGPL-3.0-only), and free to use in production,
+including commercially; a commercial license from Vericto S.A.S.
+([legal@vericto.com](mailto:legal@vericto.com)) is available for closed or
+embedded use. Earlier CLI releases keep the license they were released with:
+the Functional Source License (FSL-1.1-ALv2) for 1.10.0 to 1.13.3, and the
+Elastic License 2.0 for 1.9.1 and earlier. The default `cli-version`, 2.0.0,
+is AGPL-3.0-only (action 1.2.0 to 1.3.0 defaulted to 1.12.0, under
+FSL-1.1-ALv2). See its
 [LICENSING.md](https://github.com/vericto/vericto-cli/blob/main/LICENSING.md).
 The Vericto service it calls is offered under its own
 [terms](https://vericto.com/terms).
@@ -518,7 +554,7 @@ su espacio de trabajo.
   credencial configurada nunca pasa a offline si la API falla.
 - Para no guardar una clave, use OIDC: `oidc: true`, `workspace: ws_...` y el
   permiso `id-token: write`.
-- La acción descarga una versión fija del CLI (1.12.0 por defecto) y
+- La acción descarga una versión fija del CLI (2.0.0 por defecto) y
   verifica su SHA-256 antes de extraerlo. La clave de API se pasa solo por variable de entorno y nunca
   aparece en la línea de comandos.
 - En modo online, el SQL seleccionado se envía a su espacio de trabajo para
@@ -527,9 +563,14 @@ su espacio de trabajo.
 
 Licencia: código abierto bajo la [Apache License 2.0](LICENSE) desde 1.1.0. Las
 versiones 1.0.3 y anteriores se publicaron bajo la Elastic License 2.0 y siguen
-bajo ella. La CLI de Vericto que la action descarga tiene su propia licencia
-(FSL-1.1-ALv2 desde la CLI 1.10.0, incluida la 1.12.0 que instala por
-defecto; Elastic License 2.0 hasta la 1.9.1). La
+bajo ella. La CLI de Vericto que la action descarga tiene su propia licencia:
+desde la 2.0.0 es código abierto bajo la AGPL-3.0-only, de uso libre en
+producción, también comercial, con una licencia comercial de Vericto S.A.S.
+([legal@vericto.com](mailto:legal@vericto.com)) para uso cerrado o embebido.
+La 2.0.0, que instala por defecto, es AGPL-3.0-only. Las versiones anteriores
+conservan su licencia (FSL-1.1-ALv2 de la 1.10.0 a la 1.13.3, incluida la
+1.12.0 que instalaban por defecto las versiones 1.2.0 a 1.3.0 de la acción;
+Elastic License 2.0 hasta la 1.9.1). La
 licencia no otorga derechos sobre la marca Vericto
 ([TRADEMARKS.md](TRADEMARKS.md)).
 
